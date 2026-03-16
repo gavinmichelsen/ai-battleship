@@ -69,6 +69,20 @@ class GameBoard {
         return true;
     }
 
+    // Remove a ship from the board (useful for dragging and repositioning)
+    removeShip(name) {
+        const shipIndex = this.ships.findIndex(s => s.name === name);
+        if (shipIndex !== -1) {
+            const ship = this.ships[shipIndex];
+            ship.coordinates.forEach(coord => {
+                this.grid[coord.r][coord.c] = null;
+            });
+            this.ships.splice(shipIndex, 1);
+            return ship;
+        }
+        return null;
+    }
+
     // Receive attack, update board state, return result
     receiveAttack(row, col) {
         // Already attacked

@@ -75,13 +75,70 @@ h1 {
     justify-content: center;
 }
 
+#clear-btn {
+    background-color: var(--sunk);
+}
+
+#clear-btn:hover {
+    background-color: #991b1b;
+}
+
 .difficulty-selector {
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
-select {
+/* Shipyard */
+.shipyard-container {
+    background-color: var(--board-bg);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    text-align: center;
+}
+
+.shipyard-hint {
+    font-size: 0.9rem;
+    color: var(--disabled);
+    margin-bottom: 1rem;
+}
+
+.shipyard {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    min-height: 4rem;
+}
+
+.draggable-ship {
+    background-color: var(--ship);
+    display: flex;
+    cursor: grab;
+    transition: transform 0.2s;
+    touch-action: none;
+}
+
+.draggable-ship:active {
+    cursor: grabbing;
+}
+
+.draggable-ship.horizontal {
+    flex-direction: row;
+}
+
+.draggable-ship.vertical {
+    flex-direction: column;
+}
+
+.ship-segment {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid var(--grid-line);
+}
+
+/* Game Boards */
+.game-area {
     padding: 0.5rem;
     border-radius: 0.25rem;
     background-color: var(--bg-color);

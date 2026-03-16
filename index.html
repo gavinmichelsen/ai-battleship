@@ -17,6 +17,7 @@
             <div class="setup-controls" id="setup-controls">
                 <button id="rotate-btn">Rotate Ship (Current: Horizontal)</button>
                 <button id="randomize-btn">Randomize Fleet</button>
+                <button id="clear-btn">Clear Board</button>
                 <div class="difficulty-selector">
                     <label for="ai-difficulty">AI Difficulty:</label>
                     <select id="ai-difficulty">
@@ -30,6 +31,12 @@
             <div class="game-controls hidden" id="game-controls">
                 <button id="restart-btn">Restart Game</button>
             </div>
+        </div>
+
+        <div id="shipyard-container" class="shipyard-container">
+            <h3>Shipyard</h3>
+            <p class="shipyard-hint">Drag ships to your board. Click a ship to rotate it.</p>
+            <div id="shipyard" class="shipyard"></div>
         </div>
 
         <div class="game-area">
