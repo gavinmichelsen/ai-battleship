@@ -174,6 +174,9 @@ restartBtn.addEventListener('click', () => {
     game.state = 'setup';
     currentShipIndex = 0;
     
+    // Reset status message color
+    statusMessage.style.color = 'var(--text-color)';
+    
     setupControls.classList.remove('hidden');
     gameControls.classList.add('hidden');
     fleetStatus.classList.add('hidden');
