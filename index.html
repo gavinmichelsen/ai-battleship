@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Battleship vs AI</title>
+<<<<<<< /Users/gavinmichelsen/Desktop/Gavin/ai-battleship/ai-battleship/index.html
     <link rel="stylesheet" href="style.css">
+=======
+    <link rel="stylesheet" href="style.css?v=5">
+>>>>>>> /Users/gavinmichelsen/.windsurf/worktrees/ai-battleship/ai-battleship-9c61fc45/index.html
 </head>
 <body>
     <div class="container">
@@ -35,7 +39,7 @@
 
         <div id="shipyard-container" class="shipyard-container">
             <h3>Shipyard</h3>
-            <p class="shipyard-hint">Drag ships to your board. Click a ship to rotate it.</p>
+            <p class="shipyard-hint">Click a ship to select it, then click on your board to place it. Click a placed ship to move it.</p>
             <div id="shipyard" class="shipyard"></div>
         </div>
 
@@ -63,8 +67,27 @@
         </div>
     </div>
 
+<<<<<<< /Users/gavinmichelsen/Desktop/Gavin/ai-battleship/ai-battleship/index.html
     <script src="game.js"></script>
     <script src="ai.js"></script>
     <script src="main.js"></script>
+=======
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            const errDiv = document.createElement('div');
+            errDiv.style.color = 'red';
+            errDiv.style.position = 'absolute';
+            errDiv.style.top = '0';
+            errDiv.style.left = '0';
+            errDiv.style.backgroundColor = 'rgba(0,0,0,0.8)';
+            errDiv.style.zIndex = '9999';
+            errDiv.innerHTML = `Error: ${msg}<br>Line: ${line}`;
+            document.body.appendChild(errDiv);
+        };
+    </script>
+    <script src="game.js?v=5"></script>
+    <script src="ai.js?v=5"></script>
+    <script src="main.js?v=5"></script>
+>>>>>>> /Users/gavinmichelsen/.windsurf/worktrees/ai-battleship/ai-battleship-9c61fc45/index.html
 </body>
 </html>

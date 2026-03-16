@@ -50,6 +50,8 @@ class GameBoard {
     // Check if placement is valid (within bounds, no overlap)
     isValidPlacement(length, row, col, isHorizontal) {
         // Check bounds
+        if (row < 0 || row >= this.size || col < 0 || col >= this.size) return false;
+        
         if (isHorizontal) {
             if (col + length > this.size) return false;
         } else {
