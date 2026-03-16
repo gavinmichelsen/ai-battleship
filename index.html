@@ -3,70 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<<<<<<< /Users/gavinmichelsen/Desktop/Gavin/ai-battleship/ai-battleship/index.html
+<<<<<<< /Users/gavinmichelsen/Desktop/Gavin/ai-battleship/ai-battleship/index.html
     <title>Battleship vs AI</title>
 <<<<<<< /Users/gavinmichelsen/Desktop/Gavin/ai-battleship/ai-battleship/index.html
     <link rel="stylesheet" href="style.css">
 =======
     <link rel="stylesheet" href="style.css?v=5">
 >>>>>>> /Users/gavinmichelsen/.windsurf/worktrees/ai-battleship/ai-battleship-9c61fc45/index.html
+=======
+=======
+>>>>>>> /Users/gavinmichelsen/.windsurf/worktrees/ai-battleship/ai-battleship-9c61fc45/index.html
+    <title>Battleship — Naval Command</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=6">
+<<<<<<< /Users/gavinmichelsen/Desktop/Gavin/ai-battleship/ai-battleship/index.html
+>>>>>>> /Users/gavinmichelsen/.windsurf/worktrees/ai-battleship/ai-battleship-9c61fc45/index.html
+=======
+>>>>>>> /Users/gavinmichelsen/.windsurf/worktrees/ai-battleship/ai-battleship-9c61fc45/index.html
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Battleship</h1>
-            <div id="status-message">Place your ships to begin!</div>
-        </header>
 
-        <div class="controls-panel">
-            <div class="setup-controls" id="setup-controls">
-                <button id="rotate-btn">Rotate Ship (Current: Horizontal)</button>
-                <button id="randomize-btn">Randomize Fleet</button>
-                <button id="clear-btn">Clear Board</button>
-                <div class="difficulty-selector">
-                    <label for="ai-difficulty">AI Difficulty:</label>
-                    <select id="ai-difficulty">
-                        <option value="easy">Easy (Random)</option>
-                        <option value="medium">Medium (Hunt & Target)</option>
-                        <option value="hard">Hard (Strategic)</option>
-                    </select>
+    <div class="header">
+        <h1>Naval Command</h1>
+        <h2>Battleship</h2>
+        <div id="status-message" class="subtitle">Place your fleet to begin engagement</div>
+    </div>
+
+    <div class="status-bar" id="status-bar">
+        <div class="status-item"><div class="dot"></div> Phase: <strong id="phase-text">Deployment</strong></div>
+        <div class="status-item"><div class="dot green"></div> Ships placed: <strong id="ships-placed-text">0 / 5</strong></div>
+        <div class="status-item"><div class="dot red"></div> Difficulty: <strong id="difficulty-text">Easy</strong></div>
+    </div>
+
+    <div class="controls" id="setup-controls">
+        <button class="btn btn-primary" id="start-btn" disabled>Start Game</button>
+        <button class="btn btn-secondary" id="randomize-btn">Randomize Fleet</button>
+        <button class="btn btn-secondary" id="rotate-btn">Rotate Ship</button>
+        <button class="btn btn-danger" id="clear-btn">Clear Board</button>
+        <div class="difficulty">
+            AI:
+            <select id="ai-difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="controls hidden" id="game-controls">
+        <button class="btn btn-danger" id="restart-btn">Restart Game</button>
+    </div>
+
+    <div id="shipyard-container" class="shipyard">
+        <div class="shipyard-title">Shipyard — click to select, then click board to deploy</div>
+        <div id="shipyard" class="ships-row"></div>
+    </div>
+
+    <div class="boards">
+        <div class="board-wrapper">
+            <div class="board-label"><span>Your</span> fleet</div>
+            <div class="board-outer">
+                <div class="coord-labels-top" id="player-col-labels"></div>
+                <div class="board-with-rows">
+                    <div class="row-labels" id="player-row-labels"></div>
+                    <div id="player-board" class="board"></div>
                 </div>
-                <button id="start-btn" disabled>Start Game</button>
-            </div>
-            <div class="game-controls hidden" id="game-controls">
-                <button id="restart-btn">Restart Game</button>
             </div>
         </div>
+        <div class="board-wrapper">
+            <div class="board-label"><span>Enemy</span> fleet</div>
+            <div class="board-outer">
+                <div class="coord-labels-top" id="enemy-col-labels"></div>
+                <div class="board-with-rows">
+                    <div class="row-labels" id="enemy-row-labels"></div>
+                    <div id="enemy-board" class="board disabled"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
+<<<<<<< /Users/gavinmichelsen/Desktop/Gavin/ai-battleship/ai-battleship/index.html
+<<<<<<< /Users/gavinmichelsen/Desktop/Gavin/ai-battleship/ai-battleship/index.html
         <div id="shipyard-container" class="shipyard-container">
             <h3>Shipyard</h3>
             <p class="shipyard-hint">Click a ship to select it, then click on your board to place it. Click a placed ship to move it.</p>
             <div id="shipyard" class="shipyard"></div>
         </div>
+=======
+    <div id="turn-indicator" class="turn-indicator hidden"></div>
+>>>>>>> /Users/gavinmichelsen/.windsurf/worktrees/ai-battleship/ai-battleship-9c61fc45/index.html
+=======
+    <div id="turn-indicator" class="turn-indicator hidden"></div>
+>>>>>>> /Users/gavinmichelsen/.windsurf/worktrees/ai-battleship/ai-battleship-9c61fc45/index.html
 
-        <div class="game-area">
-            <div class="board-container">
-                <h2>Your Fleet</h2>
-                <div id="player-board" class="board"></div>
-            </div>
-            
-            <div class="board-container">
-                <h2>Enemy Fleet</h2>
-                <div id="enemy-board" class="board disabled"></div>
-            </div>
+    <div id="score-section" class="score hidden">
+        <div class="score-item">
+            <div class="label">Your hits</div>
+            <div class="value you" id="player-hits">0</div>
         </div>
-
-        <div class="fleet-status hidden" id="fleet-status">
-            <div class="player-ships-status">
-                <h3>Your Ships</h3>
-                <ul id="player-ship-list"></ul>
-            </div>
-            <div class="enemy-ships-status">
-                <h3>Enemy Ships</h3>
-                <ul id="enemy-ship-list"></ul>
-            </div>
+        <div class="score-item">
+            <div class="label">Enemy hits</div>
+            <div class="value enemy" id="enemy-hits">0</div>
         </div>
     </div>
 
+    <div class="fleet-status hidden" id="fleet-status">
+        <div class="fleet-col">
+            <h3>Your Ships</h3>
+            <ul id="player-ship-list"></ul>
+        </div>
+        <div class="fleet-col">
+            <h3>Enemy Ships</h3>
+            <ul id="enemy-ship-list"></ul>
+        </div>
+    </div>
+
+<<<<<<< /Users/gavinmichelsen/Desktop/Gavin/ai-battleship/ai-battleship/index.html
+<<<<<<< /Users/gavinmichelsen/Desktop/Gavin/ai-battleship/ai-battleship/index.html
 <<<<<<< /Users/gavinmichelsen/Desktop/Gavin/ai-battleship/ai-battleship/index.html
     <script src="game.js"></script>
     <script src="ai.js"></script>
@@ -88,6 +144,16 @@
     <script src="game.js?v=5"></script>
     <script src="ai.js?v=5"></script>
     <script src="main.js?v=5"></script>
+>>>>>>> /Users/gavinmichelsen/.windsurf/worktrees/ai-battleship/ai-battleship-9c61fc45/index.html
+=======
+    <script src="game.js?v=6"></script>
+    <script src="ai.js?v=6"></script>
+    <script src="main.js?v=6"></script>
+>>>>>>> /Users/gavinmichelsen/.windsurf/worktrees/ai-battleship/ai-battleship-9c61fc45/index.html
+=======
+    <script src="game.js?v=6"></script>
+    <script src="ai.js?v=6"></script>
+    <script src="main.js?v=6"></script>
 >>>>>>> /Users/gavinmichelsen/.windsurf/worktrees/ai-battleship/ai-battleship-9c61fc45/index.html
 </body>
 </html>

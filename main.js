@@ -1,7 +1,10 @@
 // Main UI logic
 
 const game = new Game();
-let selectedShip = null; // { name, length, isHorizontal, fromBoard }
+let selectedShip = null;
+let turnCount = 0;
+let playerHitCount = 0;
+let enemyHitCount = 0;
 
 // DOM Elements
 const playerBoardEl = document.getElementById('player-board');
@@ -20,9 +23,37 @@ const enemyShipList = document.getElementById('enemy-ship-list');
 const aiDifficultySelect = document.getElementById('ai-difficulty');
 const shipyardContainer = document.getElementById('shipyard-container');
 const shipyard = document.getElementById('shipyard');
+const phaseText = document.getElementById('phase-text');
+const shipsPlacedText = document.getElementById('ships-placed-text');
+const difficultyText = document.getElementById('difficulty-text');
+const turnIndicator = document.getElementById('turn-indicator');
+const scoreSection = document.getElementById('score-section');
+const playerHitsEl = document.getElementById('player-hits');
+const enemyHitsEl = document.getElementById('enemy-hits');
+
+// Build coordinate labels for a board
+function buildCoordLabels(colLabelsId, rowLabelsId) {
+    const cols = 'ABCDEFGHIJ';
+    const colContainer = document.getElementById(colLabelsId);
+    const rowContainer = document.getElementById(rowLabelsId);
+    colContainer.innerHTML = '<span></span>'; // corner spacer
+    for (let i = 0; i < 10; i++) {
+        const s = document.createElement('span');
+        s.textContent = cols[i];
+        colContainer.appendChild(s);
+    }
+    rowContainer.innerHTML = '';
+    for (let i = 1; i <= 10; i++) {
+        const s = document.createElement('span');
+        s.textContent = i;
+        rowContainer.appendChild(s);
+    }
+}
 
 // Initialize boards
 function initBoards() {
+    buildCoordLabels('player-col-labels', 'player-row-labels');
+    buildCoordLabels('enemy-col-labels', 'enemy-row-labels');
     createBoard(playerBoardEl, 10, handlePlayerBoardClick, handlePlayerBoardHover);
     createBoard(enemyBoardEl, 10, handleEnemyBoardClick);
     createShipyard();
@@ -34,44 +65,40 @@ function createShipyard() {
     game.fleetTypes.forEach(type => {
         const wrapper = document.createElement('div');
         wrapper.classList.add('shipyard-item');
+        wrapper.dataset.name = type.name;
+        wrapper.dataset.length = type.length;
+        wrapper.dataset.horizontal = 'true';
 
-        const label = document.createElement('div');
-        label.classList.add('shipyard-label');
-        label.textContent = `${type.name} (${type.length})`;
-
-        const shipEl = document.createElement('div');
-        shipEl.classList.add('draggable-ship', 'horizontal');
-        shipEl.dataset.name = type.name;
-        shipEl.dataset.length = type.length;
-        shipEl.dataset.horizontal = 'true';
-
+        const piece = document.createElement('div');
+        piece.classList.add('ship-piece');
         for (let i = 0; i < type.length; i++) {
-            const segment = document.createElement('div');
-            segment.classList.add('ship-segment');
-            shipEl.appendChild(segment);
+            const seg = document.createElement('div');
+            seg.classList.add('seg');
+            piece.appendChild(seg);
         }
 
-        // Click to select this ship for placement
-        shipEl.addEventListener('click', () => {
+        const label = document.createElement('div');
+        label.classList.add('ship-name');
+        label.textContent = type.name;
+
+        wrapper.appendChild(piece);
+        wrapper.appendChild(label);
+
+        wrapper.addEventListener('click', () => {
             if (game.state !== 'setup') return;
-            selectShipFromShipyard(type.name, type.length, shipEl);
+            selectShipFromShipyard(type.name, type.length, wrapper);
         });
 
-        wrapper.appendChild(label);
-        wrapper.appendChild(shipEl);
         shipyard.appendChild(wrapper);
     });
     updateSetupStatus();
 }
 
 function selectShipFromShipyard(name, length, element) {
-    // If clicking the already-selected ship, deselect it
     if (selectedShip && selectedShip.name === name && !selectedShip.fromBoard) {
         deselectShip();
         return;
     }
-
-    // If we had a board ship selected, put it back first
     if (selectedShip && selectedShip.fromBoard) {
         cancelBoardPickup();
     }
@@ -79,8 +106,7 @@ function selectShipFromShipyard(name, length, element) {
     const isHoriz = element.dataset.horizontal === 'true';
     selectedShip = { name, length, isHorizontal: isHoriz, fromBoard: false, element };
 
-    // Highlight the selected ship in the shipyard
-    shipyard.querySelectorAll('.draggable-ship').forEach(el => el.classList.remove('selected'));
+    shipyard.querySelectorAll('.shipyard-item').forEach(el => el.classList.remove('selected'));
     element.classList.add('selected');
 
     clearHoverEffects();
@@ -89,7 +115,7 @@ function selectShipFromShipyard(name, length, element) {
 
 function deselectShip() {
     if (!selectedShip) return;
-    shipyard.querySelectorAll('.draggable-ship').forEach(el => el.classList.remove('selected'));
+    shipyard.querySelectorAll('.shipyard-item').forEach(el => el.classList.remove('selected'));
     selectedShip = null;
     clearHoverEffects();
     updateSetupStatus();
@@ -97,11 +123,10 @@ function deselectShip() {
 
 function cancelBoardPickup() {
     if (!selectedShip || !selectedShip.fromBoard) return;
-    // Re-place the ship back where it was
     const ship = new Ship(selectedShip.name, selectedShip.length);
     game.playerBoard.placeShip(ship, selectedShip.originR, selectedShip.originC, selectedShip.isHorizontal);
     selectedShip = null;
-    shipyard.querySelectorAll('.draggable-ship').forEach(el => el.classList.remove('selected'));
+    shipyard.querySelectorAll('.shipyard-item').forEach(el => el.classList.remove('selected'));
     clearHoverEffects();
     renderBoard(game.playerBoard, playerBoardEl);
     updateSetupStatus();
@@ -115,29 +140,22 @@ function createBoard(boardEl, size, clickHandler, hoverHandler) {
             cell.classList.add('cell', 'empty');
             cell.dataset.r = r;
             cell.dataset.c = c;
-
-            if (clickHandler) {
-                cell.addEventListener('click', () => clickHandler(r, c));
-            }
+            if (clickHandler) cell.addEventListener('click', () => clickHandler(r, c));
             if (hoverHandler) {
                 cell.addEventListener('mouseover', () => hoverHandler(r, c));
                 cell.addEventListener('mouseout', clearHoverEffects);
             }
-
             boardEl.appendChild(cell);
         }
     }
 }
 
-// Render the current state of a board to the DOM
 function renderBoard(board, boardEl, hideShips = false) {
     for (let r = 0; r < board.size; r++) {
         for (let c = 0; c < board.size; c++) {
             const cellEl = boardEl.children[r * board.size + c];
             const cellData = board.grid[r][c];
-
             cellEl.className = 'cell';
-
             if (cellData === null) {
                 cellEl.classList.add('empty');
             } else if (cellData === 'hit') {
@@ -157,48 +175,36 @@ function renderBoard(board, boardEl, hideShips = false) {
     }
 }
 
-// --- Setup Phase: Hover Preview ---
+// --- Setup Phase ---
 function handlePlayerBoardHover(r, c) {
     if (game.state !== 'setup' || !selectedShip) return;
-
     clearHoverEffects();
     const isValid = game.playerBoard.isValidPlacement(selectedShip.length, r, c, selectedShip.isHorizontal);
-
     for (let i = 0; i < selectedShip.length; i++) {
         let tr = selectedShip.isHorizontal ? r : r + i;
         let tc = selectedShip.isHorizontal ? c + i : c;
-
         if (tr >= 0 && tr < 10 && tc >= 0 && tc < 10) {
-            const hoverCell = playerBoardEl.children[tr * 10 + tc];
-            hoverCell.classList.add(isValid ? 'ship-hover' : 'invalid-hover');
+            playerBoardEl.children[tr * 10 + tc].classList.add(isValid ? 'ship-hover' : 'invalid-hover');
         }
     }
 }
 
-// --- Setup Phase: Click to Place or Pick Up ---
 function handlePlayerBoardClick(r, c) {
     if (game.state !== 'setup') return;
-
     const cellData = game.playerBoard.grid[r][c];
 
-    // If no ship selected, check if clicking a placed ship to pick it up
     if (!selectedShip) {
-        if (cellData instanceof Ship) {
-            pickUpShipFromBoard(cellData);
-        }
+        if (cellData instanceof Ship) pickUpShipFromBoard(cellData);
         return;
     }
 
-    // Try to place the selected ship
     const ship = new Ship(selectedShip.name, selectedShip.length);
     if (game.playerBoard.placeShip(ship, r, c, selectedShip.isHorizontal)) {
-        // Success — remove from shipyard if it came from there
-        if (!selectedShip.fromBoard) {
-            const wrapper = selectedShip.element.closest('.shipyard-item');
-            if (wrapper) wrapper.remove();
+        if (!selectedShip.fromBoard && selectedShip.element) {
+            selectedShip.element.remove();
         }
         selectedShip = null;
-        shipyard.querySelectorAll('.draggable-ship').forEach(el => el.classList.remove('selected'));
+        shipyard.querySelectorAll('.shipyard-item').forEach(el => el.classList.remove('selected'));
         clearHoverEffects();
         renderBoard(game.playerBoard, playerBoardEl);
         updateSetupStatus();
@@ -206,16 +212,12 @@ function handlePlayerBoardClick(r, c) {
 }
 
 function pickUpShipFromBoard(shipData) {
-    // Determine orientation
     let isHoriz = true;
     if (shipData.coordinates.length > 1) {
         isHoriz = shipData.coordinates[0].r === shipData.coordinates[1].r;
     }
-
     const originR = shipData.coordinates[0].r;
     const originC = shipData.coordinates[0].c;
-
-    // Remove from board
     game.playerBoard.removeShip(shipData.name);
 
     selectedShip = {
@@ -223,10 +225,8 @@ function pickUpShipFromBoard(shipData) {
         length: shipData.length,
         isHorizontal: isHoriz,
         fromBoard: true,
-        originR: originR,
-        originC: originC
+        originR, originC
     };
-
     renderBoard(game.playerBoard, playerBoardEl);
     updateSetupStatus();
 }
@@ -238,62 +238,57 @@ function clearHoverEffects() {
 }
 
 function updateSetupStatus() {
-    const unplacedShips = game.fleetTypes.length - game.playerBoard.ships.length;
+    const placed = game.playerBoard.ships.length;
+    const total = game.fleetTypes.length;
+    shipsPlacedText.textContent = `${placed} / ${total}`;
+    phaseText.textContent = 'Deployment';
 
     if (selectedShip) {
-        statusMessage.textContent = `Placing ${selectedShip.name} (${selectedShip.length} spaces) — hover over board and click to place. Press R to rotate.`;
+        statusMessage.textContent = `Placing ${selectedShip.name} (${selectedShip.length}) — hover & click to place. R to rotate.`;
         startBtn.disabled = true;
-    } else if (unplacedShips > 0) {
-        statusMessage.textContent = `Click a ship in the Shipyard to place it! (${unplacedShips} remaining)`;
+    } else if (placed < total) {
+        statusMessage.textContent = `Select a ship from the Shipyard to deploy (${total - placed} remaining)`;
         startBtn.disabled = true;
     } else {
-        statusMessage.textContent = "All ships placed. Ready to start!";
+        statusMessage.textContent = 'All ships deployed. Ready to engage!';
         startBtn.disabled = false;
     }
+}
+
+function updateDifficultyDisplay() {
+    const val = aiDifficultySelect.value;
+    difficultyText.textContent = val.charAt(0).toUpperCase() + val.slice(1);
 }
 
 // --- Controls ---
 rotateBtn.addEventListener('click', () => {
     if (selectedShip) {
-        // Rotate the currently selected ship
         selectedShip.isHorizontal = !selectedShip.isHorizontal;
-        // Also update the shipyard element if it came from there
         if (selectedShip.element) {
             selectedShip.element.dataset.horizontal = selectedShip.isHorizontal;
-            selectedShip.element.classList.toggle('horizontal');
-            selectedShip.element.classList.toggle('vertical');
+            const piece = selectedShip.element.querySelector('.ship-piece');
+            if (piece) piece.classList.toggle('vertical', !selectedShip.isHorizontal);
         }
-        rotateBtn.textContent = `Rotate Ship (Current: ${selectedShip.isHorizontal ? 'Horizontal' : 'Vertical'})`;
     } else {
-        // Rotate all ships in shipyard
-        shipyard.querySelectorAll('.draggable-ship').forEach(shipEl => {
-            const currentHoriz = shipEl.dataset.horizontal === 'true';
-            shipEl.dataset.horizontal = !currentHoriz;
-            shipEl.classList.toggle('horizontal');
-            shipEl.classList.toggle('vertical');
+        shipyard.querySelectorAll('.shipyard-item').forEach(item => {
+            const cur = item.dataset.horizontal === 'true';
+            item.dataset.horizontal = !cur;
+            const piece = item.querySelector('.ship-piece');
+            if (piece) piece.classList.toggle('vertical', cur);
         });
-        const firstShip = shipyard.querySelector('.draggable-ship');
-        if (firstShip) {
-            const isHoriz = firstShip.dataset.horizontal === 'true';
-            rotateBtn.textContent = `Rotate Ship (Current: ${isHoriz ? 'Horizontal' : 'Vertical'})`;
-        }
     }
     clearHoverEffects();
 });
 
-// Keyboard shortcut: R to rotate
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'r' || e.key === 'R') {
-        if (game.state === 'setup') rotateBtn.click();
-    }
+    if ((e.key === 'r' || e.key === 'R') && game.state === 'setup') rotateBtn.click();
     if (e.key === 'Escape') {
-        if (selectedShip && selectedShip.fromBoard) {
-            cancelBoardPickup();
-        } else {
-            deselectShip();
-        }
+        if (selectedShip && selectedShip.fromBoard) cancelBoardPickup();
+        else deselectShip();
     }
 });
+
+aiDifficultySelect.addEventListener('change', updateDifficultyDisplay);
 
 randomizeBtn.addEventListener('click', () => {
     selectedShip = null;
@@ -315,14 +310,23 @@ startBtn.addEventListener('click', () => {
     if (game.start()) {
         const difficulty = aiDifficultySelect.value;
         initAI(difficulty, game);
+        turnCount = 1;
+        playerHitCount = 0;
+        enemyHitCount = 0;
 
         setupControls.classList.add('hidden');
         shipyardContainer.classList.add('hidden');
         gameControls.classList.remove('hidden');
         fleetStatus.classList.remove('hidden');
+        turnIndicator.classList.remove('hidden');
+        scoreSection.classList.remove('hidden');
         enemyBoardEl.classList.remove('disabled');
 
-        statusMessage.textContent = "Your turn! Select a target on the enemy board.";
+        phaseText.textContent = 'Battle';
+        statusMessage.textContent = 'Your move, Commander';
+        updateTurnDisplay();
+        updateScoreDisplay();
+
         renderBoard(game.playerBoard, playerBoardEl);
         renderBoard(game.enemyBoard, enemyBoardEl, true);
         updateShipLists();
@@ -334,33 +338,41 @@ restartBtn.addEventListener('click', () => {
     game.enemyBoard.clear();
     game.state = 'setup';
     selectedShip = null;
+    turnCount = 0;
+    playerHitCount = 0;
+    enemyHitCount = 0;
 
-    statusMessage.style.color = 'var(--text-color)';
+    statusMessage.style.color = '';
 
     setupControls.classList.remove('hidden');
     shipyardContainer.classList.remove('hidden');
     gameControls.classList.add('hidden');
     fleetStatus.classList.add('hidden');
+    turnIndicator.classList.add('hidden');
+    scoreSection.classList.add('hidden');
     enemyBoardEl.classList.add('disabled');
 
     initBoards();
     updateSetupStatus();
+    updateDifficultyDisplay();
 });
 
 // --- Battle Phase ---
 function handleEnemyBoardClick(r, c) {
     if (game.state !== 'playing' || game.currentTurn !== 'player') return;
-
     const result = game.playTurn(r, c);
     if (!result) return;
 
+    if (result.result === 'hit') playerHitCount++;
+
     renderBoard(game.enemyBoard, enemyBoardEl, true);
     updateShipLists();
+    updateScoreDisplay();
 
     if (game.state === 'gameover') {
         endGame(result.winner);
     } else {
-        statusMessage.textContent = "Enemy is thinking...";
+        statusMessage.textContent = 'Enemy is thinking...';
         enemyBoardEl.classList.add('disabled');
         setTimeout(() => executeAITurn(), 800);
     }
@@ -368,20 +380,33 @@ function handleEnemyBoardClick(r, c) {
 
 function executeAITurn() {
     if (game.state !== 'playing') return;
-
     const { r, c } = getAIMove();
     const result = game.enemyTurn(r, c);
     notifyAIResult(r, c, result);
 
+    if (result && result.result === 'hit') enemyHitCount++;
+    turnCount++;
+
     renderBoard(game.playerBoard, playerBoardEl);
     updateShipLists();
+    updateScoreDisplay();
+    updateTurnDisplay();
 
     if (game.state === 'gameover') {
         endGame(result.winner);
     } else {
-        statusMessage.textContent = "Your turn! Select a target on the enemy board.";
+        statusMessage.textContent = 'Your move, Commander';
         enemyBoardEl.classList.remove('disabled');
     }
+}
+
+function updateTurnDisplay() {
+    turnIndicator.innerHTML = `Turn <strong>${turnCount}</strong> — Your move, Commander`;
+}
+
+function updateScoreDisplay() {
+    playerHitsEl.textContent = playerHitCount;
+    enemyHitsEl.textContent = enemyHitCount;
 }
 
 function updateShipLists() {
@@ -391,12 +416,10 @@ function updateShipLists() {
 
 function renderShipList(shipsOnBoard, listEl, fleetTypes) {
     listEl.innerHTML = '';
-
     fleetTypes.forEach(type => {
         const li = document.createElement('li');
         const indicator = document.createElement('span');
         indicator.classList.add('ship-status-indicator');
-
         const text = document.createElement('span');
         text.classList.add('ship-text');
         text.textContent = type.name;
@@ -406,9 +429,8 @@ function renderShipList(shipsOnBoard, listEl, fleetTypes) {
             indicator.classList.add('sunk');
             text.classList.add('sunk');
         } else if (!shipInstance && game.state === 'setup') {
-            indicator.style.backgroundColor = 'var(--disabled)';
+            indicator.style.backgroundColor = 'var(--text-dim)';
         }
-
         li.appendChild(indicator);
         li.appendChild(text);
         listEl.appendChild(li);
@@ -416,14 +438,16 @@ function renderShipList(shipsOnBoard, listEl, fleetTypes) {
 }
 
 function endGame(winner) {
+    phaseText.textContent = 'Game Over';
     if (winner === 'player') {
-        statusMessage.textContent = "Victory! You destroyed the enemy fleet.";
+        statusMessage.textContent = 'Victory! You destroyed the enemy fleet.';
         statusMessage.style.color = 'var(--success)';
+        turnIndicator.innerHTML = `Game over in <strong>${turnCount}</strong> turns — <strong style="color:var(--success)">Victory!</strong>`;
     } else {
-        statusMessage.textContent = "Defeat! Your fleet has been destroyed.";
-        statusMessage.style.color = 'var(--sunk)';
+        statusMessage.textContent = 'Defeat! Your fleet has been destroyed.';
+        statusMessage.style.color = 'var(--hit)';
+        turnIndicator.innerHTML = `Game over in <strong>${turnCount}</strong> turns — <strong style="color:var(--hit)">Defeat</strong>`;
     }
-
     renderBoard(game.enemyBoard, enemyBoardEl, false);
     enemyBoardEl.classList.add('disabled');
 }
@@ -431,3 +455,4 @@ function endGame(winner) {
 // Initial setup
 initBoards();
 updateSetupStatus();
+updateDifficultyDisplay();
