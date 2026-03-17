@@ -324,6 +324,7 @@ startBtn.addEventListener('click', () => {
 
         phaseText.textContent = 'Battle';
         statusMessage.textContent = 'Your move, Commander';
+        AudioEngine.playBattleHorn();
         updateTurnDisplay();
         updateScoreDisplay();
 
@@ -363,7 +364,16 @@ function handleEnemyBoardClick(r, c) {
     const result = game.playTurn(r, c);
     if (!result) return;
 
-    if (result.result === 'hit') playerHitCount++;
+    if (result.result === 'hit') {
+        playerHitCount++;
+        if (result.sunk) {
+            AudioEngine.playSunk();
+        } else {
+            AudioEngine.playHit();
+        }
+    } else {
+        AudioEngine.playMiss();
+    }
 
     renderBoard(game.enemyBoard, enemyBoardEl, true);
     updateShipLists();
@@ -384,7 +394,16 @@ function executeAITurn() {
     const result = game.enemyTurn(r, c);
     notifyAIResult(r, c, result);
 
-    if (result && result.result === 'hit') enemyHitCount++;
+    if (result && result.result === 'hit') {
+        enemyHitCount++;
+        if (result.sunk) {
+            AudioEngine.playSunk();
+        } else {
+            AudioEngine.playHit();
+        }
+    } else if (result) {
+        AudioEngine.playMiss();
+    }
     turnCount++;
 
     renderBoard(game.playerBoard, playerBoardEl);
@@ -443,14 +462,40 @@ function endGame(winner) {
         statusMessage.textContent = 'Victory! You destroyed the enemy fleet.';
         statusMessage.style.color = 'var(--success)';
         turnIndicator.innerHTML = `Game over in <strong>${turnCount}</strong> turns — <strong style="color:var(--success)">Victory!</strong>`;
+        AudioEngine.playVictory();
     } else {
         statusMessage.textContent = 'Defeat! Your fleet has been destroyed.';
         statusMessage.style.color = 'var(--hit)';
         turnIndicator.innerHTML = `Game over in <strong>${turnCount}</strong> turns — <strong style="color:var(--hit)">Defeat</strong>`;
+        AudioEngine.playDefeat();
     }
     renderBoard(game.enemyBoard, enemyBoardEl, false);
     enemyBoardEl.classList.add('disabled');
 }
+
+// --- Sound: Auto-start on first interaction ---
+const soundToggle = document.getElementById('sound-toggle');
+let audioStarted = false;
+
+function tryAutoStartAudio() {
+    if (audioStarted) return;
+    AudioEngine.start();
+    audioStarted = true;
+    soundToggle.innerHTML = '&#x1f50a; Sound';
+    soundToggle.classList.remove('muted');
+    document.removeEventListener('click', tryAutoStartAudio);
+}
+
+// Start audio on the very first click anywhere on the page
+document.addEventListener('click', tryAutoStartAudio);
+
+soundToggle.addEventListener('click', (e) => {
+    if (!audioStarted) return; // Will be started by the global handler
+    e.stopPropagation();
+    const muted = AudioEngine.toggleMute();
+    soundToggle.innerHTML = muted ? '&#x1f507; Muted' : '&#x1f50a; Sound';
+    soundToggle.classList.toggle('muted', muted);
+});
 
 // Initial setup
 initBoards();
