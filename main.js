@@ -158,14 +158,16 @@ function renderBoard(board, boardEl, hideShips = false) {
             cellEl.className = 'cell';
             if (cellData === null) {
                 cellEl.classList.add('empty');
-            } else if (cellData === 'hit') {
-                cellEl.classList.add('hit');
+            } else if (cellData && cellData.hit) {
+                if (cellData.ship && cellData.ship.isSunk()) {
+                    cellEl.classList.add('sunk');
+                } else {
+                    cellEl.classList.add('hit');
+                }
             } else if (cellData === 'miss') {
                 cellEl.classList.add('miss');
             } else if (cellData instanceof Ship) {
-                if (cellData.isSunk()) {
-                    cellEl.classList.add('sunk');
-                } else if (!hideShips) {
+                if (!hideShips) {
                     cellEl.classList.add('ship');
                 } else {
                     cellEl.classList.add('empty');
@@ -404,16 +406,16 @@ function executeAITurn() {
     } else if (result) {
         AudioEngine.playMiss();
     }
-    turnCount++;
 
     renderBoard(game.playerBoard, playerBoardEl);
     updateShipLists();
     updateScoreDisplay();
-    updateTurnDisplay();
 
     if (game.state === 'gameover') {
         endGame(result.winner);
     } else {
+        turnCount++;
+        updateTurnDisplay();
         statusMessage.textContent = 'Your move, Commander';
         enemyBoardEl.classList.remove('disabled');
     }
