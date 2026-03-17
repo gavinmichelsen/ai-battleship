@@ -158,7 +158,7 @@ function renderBoard(board, boardEl, hideShips = false) {
             cellEl.className = 'cell';
             if (cellData === null) {
                 cellEl.classList.add('empty');
-            } else if (cellData && cellData.hit) {
+            } else if (cellData !== null && typeof cellData === 'object' && cellData.hit === true) {
                 if (cellData.ship && cellData.ship.isSunk()) {
                     cellEl.classList.add('sunk');
                 } else {

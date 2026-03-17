@@ -89,7 +89,7 @@ class GameBoard {
     receiveAttack(row, col) {
         // Already attacked
         const cell = this.grid[row][col];
-        if ((cell && cell.hit) || cell === 'miss') {
+        if ((cell !== null && typeof cell === 'object' && cell.hit === true) || cell === 'miss') {
             return { result: 'already_attacked' };
         }
 
