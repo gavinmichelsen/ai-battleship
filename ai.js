@@ -215,5 +215,5 @@ function addDirectionalTargets(r, c) {
 function reverseDirection() {
     if (!aiState.currentDirection || !aiState.firstHit) return;
     // Clear targets in the failed direction and add targets from firstHit in the opposite sense
-    aiState.potentialTargets = [];
+    aiState.potentialTargets = aiState.potentialTargets.filter(t => !hasAttacked(t.r, t.c));
 }
