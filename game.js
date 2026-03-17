@@ -88,7 +88,8 @@ class GameBoard {
     // Receive attack, update board state, return result
     receiveAttack(row, col) {
         // Already attacked
-        if (this.grid[row][col] === 'hit' || this.grid[row][col] === 'miss') {
+        const cell = this.grid[row][col];
+        if ((cell !== null && typeof cell === 'object' && cell.hit === true) || cell === 'miss') {
             return { result: 'already_attacked' };
         }
 
@@ -101,7 +102,7 @@ class GameBoard {
         } else {
             // It's a ship
             target.hit();
-            this.grid[row][col] = 'hit';
+            this.grid[row][col] = { hit: true, ship: target };
             
             return { 
                 result: 'hit', 

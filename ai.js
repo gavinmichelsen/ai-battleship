@@ -64,12 +64,16 @@ function getAIMove() {
         move = getRandomMove();
     }
 
+    // No moves available (should not happen during normal gameplay)
+    if (!move) return { r: 0, c: 0 };
+
     aiState.attacks.add(`${move.r},${move.c}`);
     return move;
 }
 
 function notifyAIResult(r, c, result) {
     if (aiState.difficulty === 'easy') return;
+    if (!result) return;
 
     if (result.result === 'hit') {
         if (result.sunk) {
@@ -108,12 +112,16 @@ function notifyAIResult(r, c, result) {
 // --- Movement Strategies ---
 
 function getRandomMove() {
-    let r, c;
-    do {
-        r = Math.floor(Math.random() * aiState.boardSize);
-        c = Math.floor(Math.random() * aiState.boardSize);
-    } while (hasAttacked(r, c));
-    return { r, c };
+    const available = [];
+    for (let r = 0; r < aiState.boardSize; r++) {
+        for (let c = 0; c < aiState.boardSize; c++) {
+            if (!hasAttacked(r, c)) {
+                available.push({ r, c });
+            }
+        }
+    }
+    if (available.length === 0) return null;
+    return available[Math.floor(Math.random() * available.length)];
 }
 
 function getCheckerboardMove() {
@@ -178,8 +186,12 @@ function determineDirection(r, c) {
         aiState.currentDirection = 'vertical';
     }
     
-    // Clear out non-directional targets
-    aiState.potentialTargets = [];
+    // Filter out targets that don't align with the determined direction
+    if (aiState.currentDirection === 'horizontal') {
+        aiState.potentialTargets = aiState.potentialTargets.filter(t => t.r === aiState.firstHit.r);
+    } else if (aiState.currentDirection === 'vertical') {
+        aiState.potentialTargets = aiState.potentialTargets.filter(t => t.c === aiState.firstHit.c);
+    }
 }
 
 function addDirectionalTargets(r, c) {
@@ -201,6 +213,7 @@ function addDirectionalTargets(r, c) {
 }
 
 function reverseDirection() {
-    // Simply rely on the other side of the firstHit which should be in the potentialTargets array
-    // The `addDirectionalTargets` adds both sides, so if one misses, the next pop will likely be the other side.
+    if (!aiState.currentDirection || !aiState.firstHit) return;
+    // Clear targets in the failed direction and add targets from firstHit in the opposite sense
+    aiState.potentialTargets = aiState.potentialTargets.filter(t => !hasAttacked(t.r, t.c));
 }
