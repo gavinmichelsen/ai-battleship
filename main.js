@@ -5,6 +5,8 @@ let selectedShip = null;
 let turnCount = 0;
 let playerHitCount = 0;
 let enemyHitCount = 0;
+let aiTurnTimeoutId = null;
+let gameOverTimeoutId = null;
 
 // DOM Elements
 const playerBoardEl = document.getElementById('player-board');
@@ -365,6 +367,11 @@ function resetGame() {
     enemyBoardEl.classList.add('disabled');
     gameoverOverlay.classList.add('hidden');
 
+    clearTimeout(aiTurnTimeoutId);
+    clearTimeout(gameOverTimeoutId);
+    aiTurnTimeoutId = null;
+    gameOverTimeoutId = null;
+
     initBoards();
     updateSetupStatus();
     updateDifficultyDisplay();
@@ -402,7 +409,8 @@ function handleEnemyBoardClick(r, c) {
         const delay = result.sunk ? 2200 : 800;
         statusMessage.textContent = result.sunk ? `You sunk the ${result.ship.name}!` : 'Enemy is thinking...';
         enemyBoardEl.classList.add('disabled');
-        setTimeout(() => {
+        aiTurnTimeoutId = setTimeout(() => {
+            aiTurnTimeoutId = null;
             statusMessage.textContent = 'Enemy is thinking...';
             executeAITurn();
         }, delay);
@@ -497,7 +505,10 @@ function endGame(winner) {
     renderBoard(game.enemyBoard, enemyBoardEl, false);
     enemyBoardEl.classList.add('disabled');
 
-    setTimeout(() => showGameOverModal(winner), 800);
+    gameOverTimeoutId = setTimeout(() => {
+        gameOverTimeoutId = null;
+        showGameOverModal(winner);
+    }, 800);
 }
 
 // --- Toast Notification for Ship Sinking ---
