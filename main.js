@@ -405,6 +405,7 @@ function handleEnemyBoardClick(r, c) {
 
     if (game.state === 'gameover') {
         endGame(result.winner);
+        if (result.sunk) animateSunkCells(game.enemyBoard, enemyBoardEl, result.ship);
     } else {
         const delay = result.sunk ? 2200 : 800;
         statusMessage.textContent = result.sunk ? `You sunk the ${result.ship.name}!` : 'Enemy is thinking...';
