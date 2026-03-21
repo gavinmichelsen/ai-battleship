@@ -416,7 +416,6 @@ function handleEnemyBoardClick(r, c) {
     }
 
     renderBoard(game.enemyBoard, enemyBoardEl, true);
-    if (result.sunk) animateSunkCells(game.enemyBoard, enemyBoardEl, result.ship);
     updateShipLists();
     updateScoreDisplay();
     clearAdvisorHighlight();
@@ -426,6 +425,7 @@ function handleEnemyBoardClick(r, c) {
         endGame(result.winner);
         if (result.sunk) animateSunkCells(game.enemyBoard, enemyBoardEl, result.ship);
     } else {
+        if (result.sunk) animateSunkCells(game.enemyBoard, enemyBoardEl, result.ship);
         const delay = result.sunk ? 2200 : 800;
         statusMessage.textContent = result.sunk ? `You sunk the ${result.ship.name}!` : 'Enemy is thinking...';
         enemyBoardEl.classList.add('disabled');

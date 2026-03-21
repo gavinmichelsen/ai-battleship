@@ -383,7 +383,7 @@ class Game {
             return false;
         }
         
-        this.enemyBoard.placeFleetRandomly(this.fleetTypes);
+        this.enemyBoard.placeFleetOptimally(this.fleetTypes);
         this.state = 'playing';
         this.currentTurn = 'player';
         return true;
