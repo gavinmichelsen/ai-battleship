@@ -66,7 +66,7 @@ function getAIMove() {
     }
 
     // No moves available (should not happen during normal gameplay)
-    if (!move) return { r: 0, c: 0 };
+    if (!move) move = { r: 0, c: 0 };
 
     aiState.attacks.add(`${move.r},${move.c}`);
     return move;
