@@ -305,7 +305,7 @@ aiDifficultySelect.addEventListener('change', updateDifficultyDisplay);
 
 randomizeBtn.addEventListener('click', () => {
     selectedShip = null;
-    game.playerBoard.placeFleetRandomly(game.fleetTypes);
+    game.playerBoard.placeFleetOptimally(game.fleetTypes);
     shipyard.innerHTML = '';
     renderBoard(game.playerBoard, playerBoardEl);
     updateSetupStatus();
