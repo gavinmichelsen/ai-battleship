@@ -465,6 +465,161 @@ li {
     color: var(--text-dim);
 }
 
+/* ── Toast Notifications ── */
+#toast-container {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+}
+.toast {
+    background: var(--bg-card);
+    border: 1px solid var(--sunk);
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 16px rgba(185,28,28,0.3);
+    animation: toast-in 0.4s ease-out, toast-out 0.4s ease-in forwards;
+    white-space: nowrap;
+}
+.toast.player-sunk {
+    border-color: var(--accent);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 16px var(--accent-glow);
+}
+.toast .toast-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+}
+.toast .toast-ship {
+    color: var(--hit);
+}
+.toast.player-sunk .toast-ship {
+    color: var(--accent);
+}
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(-16px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toast-out {
+    0%, 70% { opacity: 1; transform: translateY(0) scale(1); }
+    100%    { opacity: 0; transform: translateY(-10px) scale(0.95); }
+}
+
+/* ── Sunk cell pulse ── */
+@keyframes sunk-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(185,28,28,0.6); }
+    50%  { box-shadow: 0 0 12px 4px rgba(185,28,28,0.4); }
+    100% { box-shadow: 0 0 0 0 rgba(185,28,28,0); }
+}
+.cell.sunk-animate {
+    animation: sunk-pulse 0.6s ease-out 2;
+}
+
+/* ── Game Over Modal ── */
+.gameover-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 14, 26, 0.85);
+    backdrop-filter: blur(6px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: overlay-fade-in 0.5s ease-out;
+}
+@keyframes overlay-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.gameover-modal {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 48px;
+    text-align: center;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 8px 48px rgba(0,0,0,0.6);
+    animation: modal-pop-in 0.4s ease-out 0.1s both;
+}
+@keyframes modal-pop-in {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.gameover-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+.gameover-heading {
+    font-family: 'Space Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+.gameover-overlay.victory .gameover-heading {
+    color: var(--success);
+    text-shadow: 0 0 24px rgba(16, 185, 129, 0.4);
+}
+.gameover-overlay.defeat .gameover-heading {
+    color: var(--hit);
+    text-shadow: 0 0 24px rgba(239, 68, 68, 0.3);
+}
+.gameover-subtitle {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+    font-weight: 300;
+}
+.gameover-stats {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-bottom: 32px;
+}
+.gameover-stat {
+    text-align: center;
+}
+.gameover-stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+}
+.gameover-stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 4px;
+}
+.gameover-btn {
+    padding: 12px 36px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+.gameover-overlay.victory .gameover-modal {
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 8px 48px rgba(0,0,0,0.6), 0 0 32px rgba(16, 185, 129, 0.15);
+}
+.gameover-overlay.defeat .gameover-modal {
+    border-color: rgba(239, 68, 68, 0.2);
+    box-shadow: 0 8px 48px rgba(0,0,0,0.6), 0 0 32px rgba(239, 68, 68, 0.1);
+}
+
 /* ── Responsive ── */
 @media (max-width: 820px) {
     .boards {

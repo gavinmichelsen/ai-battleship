@@ -95,6 +95,33 @@
         </div>
     </div>
 
+    <!-- Toast notification for ship sinking -->
+    <div id="toast-container"></div>
+
+    <!-- Game Over Modal -->
+    <div id="gameover-overlay" class="gameover-overlay hidden">
+        <div id="gameover-modal" class="gameover-modal">
+            <div id="gameover-icon" class="gameover-icon"></div>
+            <h2 id="gameover-heading" class="gameover-heading"></h2>
+            <p id="gameover-subtitle" class="gameover-subtitle"></p>
+            <div class="gameover-stats">
+                <div class="gameover-stat">
+                    <div class="gameover-stat-value" id="gameover-turns">0</div>
+                    <div class="gameover-stat-label">Turns</div>
+                </div>
+                <div class="gameover-stat">
+                    <div class="gameover-stat-value" id="gameover-player-hits">0</div>
+                    <div class="gameover-stat-label">Your Hits</div>
+                </div>
+                <div class="gameover-stat">
+                    <div class="gameover-stat-value" id="gameover-enemy-hits">0</div>
+                    <div class="gameover-stat-label">Enemy Hits</div>
+                </div>
+            </div>
+            <button class="btn btn-primary gameover-btn" id="gameover-restart-btn">Play Again</button>
+        </div>
+    </div>
+
     <script src="game.js?v=7"></script>
     <script src="ai.js?v=7"></script>
     <script src="audio.js?v=7"></script>

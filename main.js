@@ -5,6 +5,8 @@ let selectedShip = null;
 let turnCount = 0;
 let playerHitCount = 0;
 let enemyHitCount = 0;
+let aiTurnTimeoutId = null;
+let gameOverTimeoutId = null;
 
 // DOM Elements
 const playerBoardEl = document.getElementById('player-board');
@@ -30,6 +32,15 @@ const turnIndicator = document.getElementById('turn-indicator');
 const scoreSection = document.getElementById('score-section');
 const playerHitsEl = document.getElementById('player-hits');
 const enemyHitsEl = document.getElementById('enemy-hits');
+const toastContainer = document.getElementById('toast-container');
+const gameoverOverlay = document.getElementById('gameover-overlay');
+const gameoverHeading = document.getElementById('gameover-heading');
+const gameoverSubtitle = document.getElementById('gameover-subtitle');
+const gameoverIcon = document.getElementById('gameover-icon');
+const gameoverTurns = document.getElementById('gameover-turns');
+const gameoverPlayerHits = document.getElementById('gameover-player-hits');
+const gameoverEnemyHits = document.getElementById('gameover-enemy-hits');
+const gameoverRestartBtn = document.getElementById('gameover-restart-btn');
 
 // Build coordinate labels for a board
 function buildCoordLabels(colLabelsId, rowLabelsId) {
@@ -336,7 +347,7 @@ startBtn.addEventListener('click', () => {
     }
 });
 
-restartBtn.addEventListener('click', () => {
+function resetGame() {
     game.playerBoard.clear();
     game.enemyBoard.clear();
     game.state = 'setup';
@@ -354,11 +365,20 @@ restartBtn.addEventListener('click', () => {
     turnIndicator.classList.add('hidden');
     scoreSection.classList.add('hidden');
     enemyBoardEl.classList.add('disabled');
+    gameoverOverlay.classList.add('hidden');
+
+    clearTimeout(aiTurnTimeoutId);
+    clearTimeout(gameOverTimeoutId);
+    aiTurnTimeoutId = null;
+    gameOverTimeoutId = null;
 
     initBoards();
     updateSetupStatus();
     updateDifficultyDisplay();
-});
+}
+
+restartBtn.addEventListener('click', resetGame);
+gameoverRestartBtn.addEventListener('click', resetGame);
 
 // --- Battle Phase ---
 function handleEnemyBoardClick(r, c) {
@@ -370,6 +390,7 @@ function handleEnemyBoardClick(r, c) {
         playerHitCount++;
         if (result.sunk) {
             AudioEngine.playSunk();
+            showSunkToast(result.ship.name, 'player');
         } else {
             AudioEngine.playHit();
         }
@@ -378,15 +399,22 @@ function handleEnemyBoardClick(r, c) {
     }
 
     renderBoard(game.enemyBoard, enemyBoardEl, true);
+    if (result.sunk) animateSunkCells(game.enemyBoard, enemyBoardEl, result.ship);
     updateShipLists();
     updateScoreDisplay();
 
     if (game.state === 'gameover') {
         endGame(result.winner);
+        if (result.sunk) animateSunkCells(game.enemyBoard, enemyBoardEl, result.ship);
     } else {
-        statusMessage.textContent = 'Enemy is thinking...';
+        const delay = result.sunk ? 2200 : 800;
+        statusMessage.textContent = result.sunk ? `You sunk the ${result.ship.name}!` : 'Enemy is thinking...';
         enemyBoardEl.classList.add('disabled');
-        setTimeout(() => executeAITurn(), 800);
+        aiTurnTimeoutId = setTimeout(() => {
+            aiTurnTimeoutId = null;
+            statusMessage.textContent = 'Enemy is thinking...';
+            executeAITurn();
+        }, delay);
     }
 }
 
@@ -400,6 +428,7 @@ function executeAITurn() {
         enemyHitCount++;
         if (result.sunk) {
             AudioEngine.playSunk();
+            showSunkToast(result.ship.name, 'enemy');
         } else {
             AudioEngine.playHit();
         }
@@ -408,6 +437,7 @@ function executeAITurn() {
     }
 
     renderBoard(game.playerBoard, playerBoardEl);
+    if (result && result.sunk) animateSunkCells(game.playerBoard, playerBoardEl, result.ship);
     updateShipLists();
     updateScoreDisplay();
 
@@ -416,7 +446,9 @@ function executeAITurn() {
     } else {
         turnCount++;
         updateTurnDisplay();
-        statusMessage.textContent = 'Your move, Commander';
+        statusMessage.textContent = result && result.sunk
+            ? `The enemy sunk your ${result.ship.name}!`
+            : 'Your move, Commander';
         enemyBoardEl.classList.remove('disabled');
     }
 }
@@ -473,6 +505,61 @@ function endGame(winner) {
     }
     renderBoard(game.enemyBoard, enemyBoardEl, false);
     enemyBoardEl.classList.add('disabled');
+
+    gameOverTimeoutId = setTimeout(() => {
+        gameOverTimeoutId = null;
+        showGameOverModal(winner);
+    }, 800);
+}
+
+// --- Toast Notification for Ship Sinking ---
+function showSunkToast(shipName, sunkBy) {
+    const toast = document.createElement('div');
+    toast.classList.add('toast');
+    if (sunkBy === 'player') {
+        toast.classList.add('player-sunk');
+        toast.innerHTML = `<div class="toast-label">Ship destroyed</div><span class="toast-ship">You sunk the ${shipName}!</span>`;
+    } else {
+        toast.innerHTML = `<div class="toast-label">Ship lost</div><span class="toast-ship">Enemy sunk your ${shipName}!</span>`;
+    }
+
+    const duration = 2200;
+    toast.style.animationDuration = '0.4s, 0.4s';
+    toast.style.animationDelay = `0s, ${duration - 400}ms`;
+
+    toastContainer.appendChild(toast);
+    setTimeout(() => toast.remove(), duration);
+}
+
+// --- Animate sunk ship cells ---
+function animateSunkCells(board, boardEl, ship) {
+    ship.coordinates.forEach(coord => {
+        const cellEl = boardEl.children[coord.r * board.size + coord.c];
+        cellEl.classList.add('sunk-animate');
+        cellEl.addEventListener('animationend', () => {
+            cellEl.classList.remove('sunk-animate');
+        }, { once: true });
+    });
+}
+
+// --- Game Over Modal ---
+function showGameOverModal(winner) {
+    gameoverOverlay.classList.remove('hidden', 'victory', 'defeat');
+    gameoverOverlay.classList.add(winner === 'player' ? 'victory' : 'defeat');
+
+    if (winner === 'player') {
+        gameoverIcon.textContent = '\u2693';
+        gameoverHeading.textContent = 'Victory';
+        gameoverSubtitle.textContent = 'You destroyed the enemy fleet. Well played, Commander.';
+    } else {
+        gameoverIcon.textContent = '\uD83D\uDCA5';
+        gameoverHeading.textContent = 'Defeat';
+        gameoverSubtitle.textContent = 'Your fleet has been destroyed. Better luck next time.';
+    }
+
+    gameoverTurns.textContent = turnCount;
+    gameoverPlayerHits.textContent = playerHitCount;
+    gameoverEnemyHits.textContent = enemyHitCount;
 }
 
 // --- Sound: Auto-start on first interaction ---
