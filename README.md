@@ -18,7 +18,7 @@
 <br>
 <br>
 
-*Play against an AI opponent with three difficulty levels, deploy your fleet with drag-and-drop, and enjoy a fully procedural audio soundscape -- all running in the browser with zero dependencies.*
+*Play against an AI opponent with three difficulty levels, deploy your fleet with click-to-place controls, and enjoy a fully procedural audio soundscape -- all running in the browser with zero dependencies.*
 
 </div>
 
