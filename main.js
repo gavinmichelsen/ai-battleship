@@ -7,6 +7,7 @@ let playerHitCount = 0;
 let enemyHitCount = 0;
 let aiTurnTimeoutId = null;
 let gameOverTimeoutId = null;
+let lastPlayerResult = null;
 
 // DOM Elements
 const playerBoardEl = document.getElementById('player-board');
@@ -369,6 +370,7 @@ function resetGame() {
 
     statusMessage.style.color = '';
 
+    lastPlayerResult = null;
     Advisor.reset();
     advisorPanel.classList.add('hidden');
     clearAdvisorHighlight();
@@ -418,6 +420,7 @@ function handleEnemyBoardClick(r, c) {
     updateShipLists();
     updateScoreDisplay();
     clearAdvisorHighlight();
+    lastPlayerResult = result;
 
     if (game.state === 'gameover') {
         endGame(result.winner);
@@ -466,7 +469,7 @@ function executeAITurn() {
             ? `The enemy sunk your ${result.ship.name}!`
             : 'Your move, Commander';
         enemyBoardEl.classList.remove('disabled');
-        updateAdvisor(result);
+        updateAdvisor(lastPlayerResult);
     }
 }
 

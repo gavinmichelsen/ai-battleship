@@ -15,7 +15,6 @@ let aiState = {
     allHits: [], // All unsunk hit cells for hard mode tracking
     sunkShipCells: new Set(), // Cells belonging to already-sunk ships
     remainingShips: [], // Lengths of ships not yet sunk
-    impossibleCells: new Set(), // Cells adjacent to sunk ships
 };
 
 function initAI(difficulty, gameInstance) {
@@ -32,7 +31,6 @@ function initAI(difficulty, gameInstance) {
     // Hard mode init
     aiState.allHits = [];
     aiState.sunkShipCells.clear();
-    aiState.impossibleCells.clear();
     aiState.remainingShips = gameInstance.fleetTypes.map(ft => ft.length);
 }
 
@@ -141,7 +139,7 @@ function buildProbabilityMap() {
                     if (aiState.attacks.has(key) && !aiState.allHits.some(h => h.r === r && h.c === c + i)) {
                         valid = false; break;
                     }
-                    if (aiState.impossibleCells.has(key) || aiState.sunkShipCells.has(key)) {
+                    if (aiState.sunkShipCells.has(key)) {
                         valid = false; break;
                     }
                     if (aiState.allHits.some(h => h.r === r && h.c === c + i)) {
@@ -168,7 +166,7 @@ function buildProbabilityMap() {
                     if (aiState.attacks.has(key) && !aiState.allHits.some(h => h.r === r + i && h.c === c)) {
                         valid = false; break;
                     }
-                    if (aiState.impossibleCells.has(key) || aiState.sunkShipCells.has(key)) {
+                    if (aiState.sunkShipCells.has(key)) {
                         valid = false; break;
                     }
                     if (aiState.allHits.some(h => h.r === r + i && h.c === c)) {
@@ -227,7 +225,7 @@ function getHardTargetMove() {
         for (const [dr, dc] of dirs) {
             const nr = hit.r + dr;
             const nc = hit.c + dc;
-            if (isValidCoord(nr, nc) && !hasAttacked(nr, nc) && !aiState.impossibleCells.has(nr + ',' + nc)) {
+            if (isValidCoord(nr, nc) && !hasAttacked(nr, nc)) {
                 adjacentCells.add(nr + ',' + nc);
             }
         }
@@ -285,10 +283,10 @@ function getLineExtensions() {
                     const r = parseInt(row);
                     const minC = cols[start];
                     const maxC = cols[i-1];
-                    if (isValidCoord(r, minC - 1) && !hasAttacked(r, minC - 1) && !aiState.impossibleCells.has(r + ',' + (minC - 1))) {
+                    if (isValidCoord(r, minC - 1) && !hasAttacked(r, minC - 1)) {
                         extensions.push({ r, c: minC - 1 });
                     }
-                    if (isValidCoord(r, maxC + 1) && !hasAttacked(r, maxC + 1) && !aiState.impossibleCells.has(r + ',' + (maxC + 1))) {
+                    if (isValidCoord(r, maxC + 1) && !hasAttacked(r, maxC + 1)) {
                         extensions.push({ r, c: maxC + 1 });
                     }
                 }
@@ -313,10 +311,10 @@ function getLineExtensions() {
                     const c = parseInt(col);
                     const minR = rows[start];
                     const maxR = rows[i-1];
-                    if (isValidCoord(minR - 1, c) && !hasAttacked(minR - 1, c) && !aiState.impossibleCells.has((minR - 1) + ',' + c)) {
+                    if (isValidCoord(minR - 1, c) && !hasAttacked(minR - 1, c)) {
                         extensions.push({ r: minR - 1, c });
                     }
-                    if (isValidCoord(maxR + 1, c) && !hasAttacked(maxR + 1, c) && !aiState.impossibleCells.has((maxR + 1) + ',' + c)) {
+                    if (isValidCoord(maxR + 1, c) && !hasAttacked(maxR + 1, c)) {
                         extensions.push({ r: maxR + 1, c });
                     }
                 }
@@ -336,16 +334,6 @@ function notifyHardAIResult(r, c, result) {
                 const key = coord.r + ',' + coord.c;
                 aiState.sunkShipCells.add(key);
                 aiState.allHits = aiState.allHits.filter(h => !(h.r === coord.r && h.c === coord.c));
-
-                // Mark adjacent cells as impossible — narrows search space
-                const dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
-                for (const [dr, dc] of dirs) {
-                    const nr = coord.r + dr;
-                    const nc = coord.c + dc;
-                    if (isValidCoord(nr, nc)) {
-                        aiState.impossibleCells.add(nr + ',' + nc);
-                    }
-                }
             }
             // Remove this ship length from remaining
             const idx = aiState.remainingShips.indexOf(sunkShip.length);
