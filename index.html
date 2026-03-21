@@ -41,6 +41,7 @@
 
     <div class="controls hidden" id="game-controls">
         <button class="btn btn-danger" id="restart-btn">Restart Game</button>
+        <button class="btn btn-secondary" id="advisor-toggle">Advisor: OFF</button>
     </div>
 
     <div id="shipyard-container" class="shipyard">
@@ -72,6 +73,19 @@
     </div>
 
     <div id="turn-indicator" class="turn-indicator hidden"></div>
+
+    <!-- AI Advisor Panel -->
+    <div id="advisor-panel" class="advisor-panel hidden">
+        <div class="advisor-header">
+            <span class="advisor-icon">&#x1F9ED;</span>
+            <span class="advisor-title">Strategic Advisor</span>
+        </div>
+        <div class="advisor-recommendation" id="advisor-recommendation">
+            <div class="advisor-target" id="advisor-target">--</div>
+            <div class="advisor-confidence" id="advisor-confidence"></div>
+        </div>
+        <div class="advisor-tip" id="advisor-tip">Enable the advisor for strategic recommendations.</div>
+    </div>
 
     <div id="score-section" class="score hidden">
         <div class="score-item">
@@ -122,9 +136,10 @@
         </div>
     </div>
 
-    <script src="game.js?v=7"></script>
-    <script src="ai.js?v=7"></script>
-    <script src="audio.js?v=7"></script>
-    <script src="main.js?v=7"></script>
+    <script src="game.js?v=8"></script>
+    <script src="ai.js?v=8"></script>
+    <script src="advisor.js?v=8"></script>
+    <script src="audio.js?v=8"></script>
+    <script src="main.js?v=8"></script>
 </body>
 </html>

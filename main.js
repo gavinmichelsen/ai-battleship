@@ -7,6 +7,7 @@ let playerHitCount = 0;
 let enemyHitCount = 0;
 let aiTurnTimeoutId = null;
 let gameOverTimeoutId = null;
+let lastPlayerResult = null;
 
 // DOM Elements
 const playerBoardEl = document.getElementById('player-board');
@@ -33,6 +34,11 @@ const scoreSection = document.getElementById('score-section');
 const playerHitsEl = document.getElementById('player-hits');
 const enemyHitsEl = document.getElementById('enemy-hits');
 const toastContainer = document.getElementById('toast-container');
+const advisorToggleBtn = document.getElementById('advisor-toggle');
+const advisorPanel = document.getElementById('advisor-panel');
+const advisorTarget = document.getElementById('advisor-target');
+const advisorConfidence = document.getElementById('advisor-confidence');
+const advisorTip = document.getElementById('advisor-tip');
 const gameoverOverlay = document.getElementById('gameover-overlay');
 const gameoverHeading = document.getElementById('gameover-heading');
 const gameoverSubtitle = document.getElementById('gameover-subtitle');
@@ -344,6 +350,12 @@ startBtn.addEventListener('click', () => {
         renderBoard(game.playerBoard, playerBoardEl);
         renderBoard(game.enemyBoard, enemyBoardEl, true);
         updateShipLists();
+
+        // Show advisor panel if advisor is enabled
+        if (Advisor.isEnabled()) {
+            advisorPanel.classList.remove('hidden');
+            updateAdvisor(null);
+        }
     }
 });
 
@@ -357,6 +369,11 @@ function resetGame() {
     enemyHitCount = 0;
 
     statusMessage.style.color = '';
+
+    lastPlayerResult = null;
+    Advisor.reset();
+    advisorPanel.classList.add('hidden');
+    clearAdvisorHighlight();
 
     setupControls.classList.remove('hidden');
     shipyardContainer.classList.remove('hidden');
@@ -402,6 +419,8 @@ function handleEnemyBoardClick(r, c) {
     if (result.sunk) animateSunkCells(game.enemyBoard, enemyBoardEl, result.ship);
     updateShipLists();
     updateScoreDisplay();
+    clearAdvisorHighlight();
+    lastPlayerResult = result;
 
     if (game.state === 'gameover') {
         endGame(result.winner);
@@ -450,6 +469,7 @@ function executeAITurn() {
             ? `The enemy sunk your ${result.ship.name}!`
             : 'Your move, Commander';
         enemyBoardEl.classList.remove('disabled');
+        updateAdvisor(lastPlayerResult);
     }
 }
 
@@ -585,6 +605,81 @@ soundToggle.addEventListener('click', (e) => {
     soundToggle.innerHTML = muted ? '&#x1f507; Muted' : '&#x1f50a; Sound';
     soundToggle.classList.toggle('muted', muted);
 });
+
+// --- Advisor Toggle & Update ---
+advisorToggleBtn.addEventListener('click', () => {
+    const newState = !Advisor.isEnabled();
+    Advisor.setEnabled(newState);
+    advisorToggleBtn.textContent = newState ? 'Advisor: ON' : 'Advisor: OFF';
+    if (newState) {
+        advisorToggleBtn.style.borderColor = 'rgba(6, 182, 212, 0.5)';
+        advisorToggleBtn.style.color = 'var(--accent)';
+        if (game.state === 'playing') {
+            advisorPanel.classList.remove('hidden');
+            updateAdvisor(null);
+        }
+    } else {
+        advisorToggleBtn.style.borderColor = '';
+        advisorToggleBtn.style.color = '';
+        advisorPanel.classList.add('hidden');
+        clearAdvisorHighlight();
+    }
+});
+
+function updateAdvisor(lastResult) {
+    if (!Advisor.isEnabled() || game.state !== 'playing') return;
+    advisorPanel.classList.remove('hidden');
+
+    const rec = Advisor.getRecommendation(game.enemyBoard, game.fleetTypes, lastResult);
+    if (!rec) {
+        advisorTarget.textContent = '--';
+        advisorConfidence.innerHTML = '';
+        advisorTip.textContent = 'No recommendation available.';
+        clearAdvisorHighlight();
+        return;
+    }
+
+    advisorTarget.textContent = rec.coordLabel;
+    advisorConfidence.innerHTML = `Confidence: <strong>${rec.confidence}%</strong>`;
+    advisorTip.textContent = rec.tip;
+
+    // Highlight recommended cell on enemy board
+    clearAdvisorHighlight();
+    const cellIdx = rec.row * game.enemyBoard.size + rec.col;
+    const cellEl = enemyBoardEl.children[cellIdx];
+    if (cellEl) cellEl.classList.add('advisor-highlight');
+
+    // Show subtle probability heatmap on empty cells
+    if (rec.probMap) {
+        const size = game.enemyBoard.size;
+        let maxVal = 0;
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
+                if (rec.probMap[r][c] > maxVal) maxVal = rec.probMap[r][c];
+            }
+        }
+        if (maxVal > 0) {
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const idx = r * size + c;
+                    const el = enemyBoardEl.children[idx];
+                    if (!el || !el.classList.contains('empty')) continue;
+                    const ratio = rec.probMap[r][c] / maxVal;
+                    el.classList.remove('prob-low', 'prob-med', 'prob-high');
+                    if (ratio > 0.6) el.classList.add('prob-high');
+                    else if (ratio > 0.3) el.classList.add('prob-med');
+                    else if (ratio > 0.05) el.classList.add('prob-low');
+                }
+            }
+        }
+    }
+}
+
+function clearAdvisorHighlight() {
+    enemyBoardEl.querySelectorAll('.cell').forEach(cell => {
+        cell.classList.remove('advisor-highlight', 'prob-low', 'prob-med', 'prob-high');
+    });
+}
 
 // Initial setup
 initBoards();

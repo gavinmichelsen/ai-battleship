@@ -9,7 +9,12 @@ let aiState = {
     hitStack: [], // Queue of hits to explore around
     potentialTargets: [], // Adjacent cells to hits
     firstHit: null, // Track the first hit of current targeted ship
-    currentDirection: null // 'up', 'down', 'left', 'right'
+    currentDirection: null, // 'horizontal' or 'vertical'
+
+    // Hard mode enhancements
+    allHits: [], // All unsunk hit cells for hard mode tracking
+    sunkShipCells: new Set(), // Cells belonging to already-sunk ships
+    remainingShips: [], // Lengths of ships not yet sunk
 };
 
 function initAI(difficulty, gameInstance) {
@@ -22,6 +27,11 @@ function initAI(difficulty, gameInstance) {
     aiState.potentialTargets = [];
     aiState.firstHit = null;
     aiState.currentDirection = null;
+
+    // Hard mode init
+    aiState.allHits = [];
+    aiState.sunkShipCells.clear();
+    aiState.remainingShips = gameInstance.fleetTypes.map(ft => ft.length);
 }
 
 function hasAttacked(r, c) {
@@ -47,16 +57,7 @@ function getAIMove() {
             }
         }
     } else if (aiState.difficulty === 'hard') {
-        if (aiState.mode === 'hunt') {
-            move = getCheckerboardMove();
-            if (!move) move = getRandomMove(); // Fallback if checkerboard is full
-        } else {
-            move = getSmartTargetedMove();
-            if (!move) {
-                aiState.mode = 'hunt';
-                move = getCheckerboardMove() || getRandomMove();
-            }
-        }
+        move = getHardMove();
     }
     
     // Safety fallback
@@ -75,33 +76,32 @@ function notifyAIResult(r, c, result) {
     if (aiState.difficulty === 'easy') return;
     if (!result) return;
 
+    if (aiState.difficulty === 'hard') {
+        notifyHardAIResult(r, c, result);
+        return;
+    }
+
+    // Medium difficulty logic
     if (result.result === 'hit') {
         if (result.sunk) {
-            // Ship sunk, go back to hunt mode
             aiState.mode = 'hunt';
             aiState.hitStack = [];
             aiState.potentialTargets = [];
             aiState.firstHit = null;
             aiState.currentDirection = null;
-            
-            // Note: A smarter AI would remove adjacent cells of the sunk ship from future targeting
         } else {
-            // Hit but not sunk, switch/stay in target mode
             aiState.mode = 'target';
             if (!aiState.firstHit) {
                 aiState.firstHit = {r, c};
                 addAdjacentTargets(r, c);
             } else {
-                // We have a second hit, we can determine direction
                 determineDirection(r, c);
                 addDirectionalTargets(r, c);
             }
         }
     } else if (result.result === 'miss') {
         if (aiState.mode === 'target' && aiState.currentDirection) {
-            // Missed while targeting a specific direction, reverse direction
             reverseDirection();
-            // Add targets from the first hit in the new direction
             if (aiState.firstHit) {
                 addDirectionalTargets(aiState.firstHit.r, aiState.firstHit.c);
             }
@@ -109,7 +109,242 @@ function notifyAIResult(r, c, result) {
     }
 }
 
-// --- Movement Strategies ---
+// ============================================================
+// HARD MODE — Probability density-based AI
+// ============================================================
+
+function getHardMove() {
+    // If we have unsunk hits, try to sink those ships first
+    if (aiState.allHits.length > 0) {
+        const targetMove = getHardTargetMove();
+        if (targetMove) return targetMove;
+    }
+    // Hunt mode: use probability density map
+    return getHardHuntMove();
+}
+
+// Build a probability density map for the player board from the AI perspective
+function buildProbabilityMap() {
+    const size = aiState.boardSize;
+    const prob = Array(size).fill(null).map(() => Array(size).fill(0));
+
+    for (const shipLen of aiState.remainingShips) {
+        // Horizontal placements
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c <= size - shipLen; c++) {
+                let valid = true;
+                let touchesUnsunkHit = false;
+                for (let i = 0; i < shipLen; i++) {
+                    const key = r + ',' + (c + i);
+                    if (aiState.attacks.has(key) && !aiState.allHits.some(h => h.r === r && h.c === c + i)) {
+                        valid = false; break;
+                    }
+                    if (aiState.sunkShipCells.has(key)) {
+                        valid = false; break;
+                    }
+                    if (aiState.allHits.some(h => h.r === r && h.c === c + i)) {
+                        touchesUnsunkHit = true;
+                    }
+                }
+                if (valid) {
+                    const weight = touchesUnsunkHit ? 25 : 1;
+                    for (let i = 0; i < shipLen; i++) {
+                        if (!aiState.attacks.has(r + ',' + (c + i))) {
+                            prob[r][c + i] += weight;
+                        }
+                    }
+                }
+            }
+        }
+        // Vertical placements
+        for (let r = 0; r <= size - shipLen; r++) {
+            for (let c = 0; c < size; c++) {
+                let valid = true;
+                let touchesUnsunkHit = false;
+                for (let i = 0; i < shipLen; i++) {
+                    const key = (r + i) + ',' + c;
+                    if (aiState.attacks.has(key) && !aiState.allHits.some(h => h.r === r + i && h.c === c)) {
+                        valid = false; break;
+                    }
+                    if (aiState.sunkShipCells.has(key)) {
+                        valid = false; break;
+                    }
+                    if (aiState.allHits.some(h => h.r === r + i && h.c === c)) {
+                        touchesUnsunkHit = true;
+                    }
+                }
+                if (valid) {
+                    const weight = touchesUnsunkHit ? 25 : 1;
+                    for (let i = 0; i < shipLen; i++) {
+                        if (!aiState.attacks.has((r + i) + ',' + c)) {
+                            prob[r + i][c] += weight;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return prob;
+}
+
+function getHardHuntMove() {
+    const prob = buildProbabilityMap();
+    const size = aiState.boardSize;
+
+    let maxProb = 0;
+    for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+            if (prob[r][c] > maxProb) maxProb = prob[r][c];
+        }
+    }
+    if (maxProb === 0) return getRandomMove();
+
+    const candidates = [];
+    for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+            if (prob[r][c] === maxProb) candidates.push({ r, c });
+        }
+    }
+
+    // Break ties with parity based on smallest remaining ship
+    const minShipLen = Math.min(...aiState.remainingShips);
+    const parityCandidates = candidates.filter(
+        cell => (cell.r + cell.c) % minShipLen === 0
+    );
+    const pool = parityCandidates.length > 0 ? parityCandidates : candidates;
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function getHardTargetMove() {
+    const prob = buildProbabilityMap();
+
+    // Only consider cells adjacent to unsunk hits
+    const adjacentCells = new Set();
+    for (const hit of aiState.allHits) {
+        const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+        for (const [dr, dc] of dirs) {
+            const nr = hit.r + dr;
+            const nc = hit.c + dc;
+            if (isValidCoord(nr, nc) && !hasAttacked(nr, nc)) {
+                adjacentCells.add(nr + ',' + nc);
+            }
+        }
+    }
+    if (adjacentCells.size === 0) return null;
+
+    // If we have 2+ collinear hits, prefer extending the line
+    const lineExtensions = getLineExtensions();
+    if (lineExtensions.length > 0) {
+        let best = null;
+        let bestVal = -1;
+        for (const cell of lineExtensions) {
+            if (prob[cell.r][cell.c] > bestVal) {
+                bestVal = prob[cell.r][cell.c];
+                best = cell;
+            }
+        }
+        if (best) return best;
+    }
+
+    // Otherwise pick highest probability from adjacent cells
+    let best = null;
+    let bestVal = -1;
+    for (const key of adjacentCells) {
+        const parts = key.split(',');
+        const r = parseInt(parts[0]);
+        const c = parseInt(parts[1]);
+        if (prob[r][c] > bestVal) {
+            bestVal = prob[r][c];
+            best = { r, c };
+        }
+    }
+    return best;
+}
+
+// Find cells that extend a line of 2+ collinear unsunk hits
+function getLineExtensions() {
+    const hits = aiState.allHits;
+    if (hits.length < 2) return [];
+    const extensions = [];
+
+    // Group hits by row
+    const byRow = {};
+    for (const h of hits) {
+        if (!byRow[h.r]) byRow[h.r] = [];
+        byRow[h.r].push(h.c);
+    }
+    for (const row in byRow) {
+        const cols = byRow[row].sort((a, b) => a - b);
+        if (cols.length < 2) continue;
+        let start = 0;
+        for (let i = 1; i <= cols.length; i++) {
+            if (i === cols.length || cols[i] !== cols[i-1] + 1) {
+                if (i - start >= 2) {
+                    const r = parseInt(row);
+                    const minC = cols[start];
+                    const maxC = cols[i-1];
+                    if (isValidCoord(r, minC - 1) && !hasAttacked(r, minC - 1)) {
+                        extensions.push({ r, c: minC - 1 });
+                    }
+                    if (isValidCoord(r, maxC + 1) && !hasAttacked(r, maxC + 1)) {
+                        extensions.push({ r, c: maxC + 1 });
+                    }
+                }
+                start = i;
+            }
+        }
+    }
+
+    // Group hits by column
+    const byCol = {};
+    for (const h of hits) {
+        if (!byCol[h.c]) byCol[h.c] = [];
+        byCol[h.c].push(h.r);
+    }
+    for (const col in byCol) {
+        const rows = byCol[col].sort((a, b) => a - b);
+        if (rows.length < 2) continue;
+        let start = 0;
+        for (let i = 1; i <= rows.length; i++) {
+            if (i === rows.length || rows[i] !== rows[i-1] + 1) {
+                if (i - start >= 2) {
+                    const c = parseInt(col);
+                    const minR = rows[start];
+                    const maxR = rows[i-1];
+                    if (isValidCoord(minR - 1, c) && !hasAttacked(minR - 1, c)) {
+                        extensions.push({ r: minR - 1, c });
+                    }
+                    if (isValidCoord(maxR + 1, c) && !hasAttacked(maxR + 1, c)) {
+                        extensions.push({ r: maxR + 1, c });
+                    }
+                }
+                start = i;
+            }
+        }
+    }
+    return extensions;
+}
+
+function notifyHardAIResult(r, c, result) {
+    if (result.result === 'hit') {
+        if (result.sunk) {
+            const sunkShip = result.ship;
+            const sunkCoords = sunkShip.coordinates;
+            for (const coord of sunkCoords) {
+                const key = coord.r + ',' + coord.c;
+                aiState.sunkShipCells.add(key);
+                aiState.allHits = aiState.allHits.filter(h => !(h.r === coord.r && h.c === coord.c));
+            }
+            // Remove this ship length from remaining
+            const idx = aiState.remainingShips.indexOf(sunkShip.length);
+            if (idx !== -1) aiState.remainingShips.splice(idx, 1);
+        } else {
+            aiState.allHits.push({ r, c });
+        }
+    }
+}
+
+// --- Movement Strategies (Easy/Medium) ---
 
 function getRandomMove() {
     const available = [];
@@ -124,21 +359,6 @@ function getRandomMove() {
     return available[Math.floor(Math.random() * available.length)];
 }
 
-function getCheckerboardMove() {
-    let possibleMoves = [];
-    for (let r = 0; r < aiState.boardSize; r++) {
-        for (let c = 0; c < aiState.boardSize; c++) {
-            // Checkerboard pattern: parity (r+c) is even
-            if ((r + c) % 2 === 0 && !hasAttacked(r, c)) {
-                possibleMoves.push({r, c});
-            }
-        }
-    }
-    
-    if (possibleMoves.length === 0) return null;
-    return possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-}
-
 function getTargetedMove() {
     while (aiState.potentialTargets.length > 0) {
         const target = aiState.potentialTargets.pop();
@@ -149,15 +369,9 @@ function getTargetedMove() {
     return null;
 }
 
-function getSmartTargetedMove() {
-    // Similar to medium for now, but prioritized by direction
-    return getTargetedMove();
-}
-
-// --- Targeting Logic ---
+// --- Targeting Logic (Medium) ---
 
 function addAdjacentTargets(r, c) {
-    // Up, Right, Down, Left
     const directions = [
         {dr: -1, dc: 0},
         {dr: 0, dc: 1},
@@ -165,7 +379,6 @@ function addAdjacentTargets(r, c) {
         {dr: 0, dc: -1}
     ];
 
-    // Randomize order for medium difficulty unpredictability
     directions.sort(() => Math.random() - 0.5);
 
     directions.forEach(dir => {
@@ -186,7 +399,6 @@ function determineDirection(r, c) {
         aiState.currentDirection = 'vertical';
     }
     
-    // Filter out targets that don't align with the determined direction
     if (aiState.currentDirection === 'horizontal') {
         aiState.potentialTargets = aiState.potentialTargets.filter(t => t.r === aiState.firstHit.r);
     } else if (aiState.currentDirection === 'vertical') {
@@ -214,6 +426,5 @@ function addDirectionalTargets(r, c) {
 
 function reverseDirection() {
     if (!aiState.currentDirection || !aiState.firstHit) return;
-    // Clear targets in the failed direction and add targets from firstHit in the opposite sense
     aiState.potentialTargets = aiState.potentialTargets.filter(t => !hasAttacked(t.r, t.c));
 }
