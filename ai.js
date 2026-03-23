@@ -85,7 +85,6 @@ function notifyAIResult(r, c, result) {
     if (result.result === 'hit') {
         if (result.sunk) {
             // Only reset if no other unsunk hits remain in potentialTargets vicinity
-            const sunkCoords = result.ship.coordinates;
             // Remove any potential targets that were adjacent to the sunk ship only
             aiState.potentialTargets = aiState.potentialTargets.filter(t => !hasAttacked(t.r, t.c));
             
