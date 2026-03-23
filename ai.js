@@ -448,11 +448,7 @@ function addDirectionalTargets(r, c) {
 
 function reverseDirection() {
     if (!aiState.currentDirection || !aiState.firstHit) return;
-    // Flip the direction so we explore the opposite end
-    if (aiState.currentDirection === 'horizontal') {
-        aiState.currentDirection = 'vertical';
-    } else {
-        aiState.currentDirection = 'horizontal';
-    }
+    // Keep the same axis but prune already-attacked targets so the AI
+    // explores the opposite end of the line from firstHit.
     aiState.potentialTargets = aiState.potentialTargets.filter(t => !hasAttacked(t.r, t.c));
 }
