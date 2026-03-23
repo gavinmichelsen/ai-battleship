@@ -277,6 +277,9 @@ function updateSetupStatus() {
 function updateDifficultyDisplay() {
     const val = aiDifficultySelect.value;
     difficultyText.textContent = val.charAt(0).toUpperCase() + val.slice(1);
+    const hints = { easy: 'Random targeting', medium: 'Hunt & target strategy', hard: 'Probability-based strategy' };
+    const hintEl = document.getElementById('difficulty-hint');
+    if (hintEl) hintEl.textContent = hints[val] || '';
 }
 
 // --- Controls ---
@@ -401,7 +404,12 @@ gameoverRestartBtn.addEventListener('click', resetGame);
 function handleEnemyBoardClick(r, c) {
     if (game.state !== 'playing' || game.currentTurn !== 'player') return;
     const result = game.playTurn(r, c);
-    if (!result) return;
+    if (!result) {
+        // Give feedback for clicking an already-attacked cell
+        AudioEngine.playError();
+        statusMessage.textContent = 'Already targeted! Choose another cell.';
+        return;
+    }
 
     if (result.result === 'hit') {
         playerHitCount++;
@@ -580,6 +588,12 @@ function showGameOverModal(winner) {
     gameoverTurns.textContent = turnCount;
     gameoverPlayerHits.textContent = playerHitCount;
     gameoverEnemyHits.textContent = enemyHitCount;
+
+    // Compute and display accuracy
+    const playerTotalShots = playerHitCount + game.enemyBoard.missedAttacks.length;
+    const playerAccuracy = playerTotalShots > 0 ? Math.round((playerHitCount / playerTotalShots) * 100) : 0;
+    const accuracyEl = document.getElementById('gameover-accuracy');
+    if (accuracyEl) accuracyEl.textContent = playerAccuracy + '%';
 }
 
 // --- Sound: Auto-start on first interaction ---
@@ -590,8 +604,16 @@ function tryAutoStartAudio() {
     if (audioStarted) return;
     AudioEngine.start();
     audioStarted = true;
-    soundToggle.innerHTML = '&#x1f50a; Sound';
-    soundToggle.classList.remove('muted');
+    // Restore mute preference from localStorage
+    const savedMute = localStorage.getItem('battleship-muted');
+    if (savedMute === 'true') {
+        AudioEngine.toggleMute();
+        soundToggle.innerHTML = '&#x1f507; Muted';
+        soundToggle.classList.add('muted');
+    } else {
+        soundToggle.innerHTML = '&#x1f50a; Sound';
+        soundToggle.classList.remove('muted');
+    }
     document.removeEventListener('click', tryAutoStartAudio);
 }
 
@@ -604,6 +626,7 @@ soundToggle.addEventListener('click', (e) => {
     const muted = AudioEngine.toggleMute();
     soundToggle.innerHTML = muted ? '&#x1f507; Muted' : '&#x1f50a; Sound';
     soundToggle.classList.toggle('muted', muted);
+    localStorage.setItem('battleship-muted', muted);
 });
 
 // --- Advisor Toggle & Update ---
@@ -640,7 +663,7 @@ function updateAdvisor(lastResult) {
     }
 
     advisorTarget.textContent = rec.coordLabel;
-    advisorConfidence.innerHTML = `Confidence: <strong>${rec.confidence}%</strong>`;
+    advisorConfidence.innerHTML = `Priority: <strong>${rec.confidence}%</strong>`;
     advisorTip.textContent = rec.tip;
 
     // Highlight recommended cell on enemy board

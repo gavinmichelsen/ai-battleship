@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+/* Fonts loaded via <link> in index.html — no duplicate @import needed */
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -179,6 +179,12 @@ body {
     cursor: pointer;
 }
 .difficulty select option { background: var(--bg-panel); }
+.difficulty-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 300;
+    margin-left: 2px;
+}
 
 /* ── Shipyard ── */
 .shipyard {
