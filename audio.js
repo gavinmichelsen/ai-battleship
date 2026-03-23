@@ -6,6 +6,7 @@ const AudioEngine = (() => {
     let isPlaying = false;
     let isMuted = false;
     let nodes = [];
+    let timers = [];
 
     function init() {
         if (ctx) return;
@@ -137,7 +138,7 @@ const AudioEngine = (() => {
 
         // Schedule next ping with some randomness (6-12 seconds)
         const nextDelay = 6000 + Math.random() * 6000;
-        setTimeout(() => scheduleSonarPing(), nextDelay);
+        timers.push(setTimeout(() => scheduleSonarPing(), nextDelay));
     }
 
     // --- Distant Metal Creak (occasional) ---
@@ -171,7 +172,7 @@ const AudioEngine = (() => {
 
         // Next creak in 10-25 seconds
         const nextDelay = 10000 + Math.random() * 15000;
-        setTimeout(() => scheduleCreak(), nextDelay);
+        timers.push(setTimeout(() => scheduleCreak(), nextDelay));
     }
 
     // Utility: create a distortion curve for WaveShaperNode
@@ -512,9 +513,9 @@ const AudioEngine = (() => {
         createOceanWaves();
         createSubHum();
 
-        // Stagger the first ping and creak
-        setTimeout(() => scheduleSonarPing(), 2000);
-        setTimeout(() => scheduleCreak(), 8000);
+        // Stagger the first ping and creak (tracked so stop() can cancel them)
+        timers.push(setTimeout(() => scheduleSonarPing(), 2000));
+        timers.push(setTimeout(() => scheduleCreak(), 8000));
     }
 
     function ensureContext() {
@@ -522,10 +523,32 @@ const AudioEngine = (() => {
         if (ctx.state === 'suspended') ctx.resume();
     }
 
+    // --- SFX: Error — Subtle buzz for invalid action ---
+    function playError() {
+        if (!ctx || isMuted) return;
+        const now = ctx.currentTime;
+
+        const osc = ctx.createOscillator();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.linearRampToValueAtTime(150, now + 0.12);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.06, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+        osc.connect(g);
+        g.connect(masterGain);
+        osc.start(now);
+        osc.stop(now + 0.15);
+    }
+
     function stop() {
         isPlaying = false;
         nodes.forEach(n => { try { n.stop(); } catch(e) {} });
         nodes = [];
+        timers.forEach(t => clearTimeout(t));
+        timers = [];
         if (ctx) {
             ctx.close();
             ctx = null;
@@ -545,5 +568,5 @@ const AudioEngine = (() => {
     }
 
     return { start, stop, toggleMute, getIsMuted, ensureContext,
-             playHit, playMiss, playSunk, playBattleHorn, playVictory, playDefeat };
+             playHit, playMiss, playSunk, playBattleHorn, playVictory, playDefeat, playError };
 })();

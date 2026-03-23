@@ -84,11 +84,23 @@ function notifyAIResult(r, c, result) {
     // Medium difficulty logic
     if (result.result === 'hit') {
         if (result.sunk) {
-            aiState.mode = 'hunt';
-            aiState.hitStack = [];
-            aiState.potentialTargets = [];
-            aiState.firstHit = null;
-            aiState.currentDirection = null;
+            // Only reset if no other unsunk hits remain in potentialTargets vicinity
+            // Remove any potential targets that were adjacent to the sunk ship only
+            aiState.potentialTargets = aiState.potentialTargets.filter(t => !hasAttacked(t.r, t.c));
+            
+            // Check if we still have unexplored hits (from a different ship)
+            const hasRemainingTargets = aiState.potentialTargets.length > 0;
+            if (!hasRemainingTargets) {
+                aiState.mode = 'hunt';
+                aiState.hitStack = [];
+                aiState.potentialTargets = [];
+                aiState.firstHit = null;
+                aiState.currentDirection = null;
+            } else {
+                // Continue targeting — there may be another ship nearby
+                aiState.firstHit = null;
+                aiState.currentDirection = null;
+            }
         } else {
             aiState.mode = 'target';
             if (!aiState.firstHit) {
@@ -407,24 +419,36 @@ function determineDirection(r, c) {
 }
 
 function addDirectionalTargets(r, c) {
+    const candidates = [];
     if (aiState.currentDirection === 'horizontal') {
-        if (isValidCoord(r, c - 1) && !hasAttacked(r, c - 1)) aiState.potentialTargets.push({r, c: c - 1});
-        if (isValidCoord(r, c + 1) && !hasAttacked(r, c + 1)) aiState.potentialTargets.push({r, c: c + 1});
+        candidates.push({r, c: c - 1}, {r, c: c + 1});
         if (aiState.firstHit) {
-             if (isValidCoord(aiState.firstHit.r, aiState.firstHit.c - 1) && !hasAttacked(aiState.firstHit.r, aiState.firstHit.c - 1)) aiState.potentialTargets.push({r: aiState.firstHit.r, c: aiState.firstHit.c - 1});
-             if (isValidCoord(aiState.firstHit.r, aiState.firstHit.c + 1) && !hasAttacked(aiState.firstHit.r, aiState.firstHit.c + 1)) aiState.potentialTargets.push({r: aiState.firstHit.r, c: aiState.firstHit.c + 1});
+            candidates.push(
+                {r: aiState.firstHit.r, c: aiState.firstHit.c - 1},
+                {r: aiState.firstHit.r, c: aiState.firstHit.c + 1}
+            );
         }
     } else if (aiState.currentDirection === 'vertical') {
-        if (isValidCoord(r - 1, c) && !hasAttacked(r - 1, c)) aiState.potentialTargets.push({r: r - 1, c});
-        if (isValidCoord(r + 1, c) && !hasAttacked(r + 1, c)) aiState.potentialTargets.push({r: r + 1, c});
+        candidates.push({r: r - 1, c}, {r: r + 1, c});
         if (aiState.firstHit) {
-            if (isValidCoord(aiState.firstHit.r - 1, aiState.firstHit.c) && !hasAttacked(aiState.firstHit.r - 1, aiState.firstHit.c)) aiState.potentialTargets.push({r: aiState.firstHit.r - 1, c: aiState.firstHit.c});
-            if (isValidCoord(aiState.firstHit.r + 1, aiState.firstHit.c) && !hasAttacked(aiState.firstHit.r + 1, aiState.firstHit.c)) aiState.potentialTargets.push({r: aiState.firstHit.r + 1, c: aiState.firstHit.c});
-       }
+            candidates.push(
+                {r: aiState.firstHit.r - 1, c: aiState.firstHit.c},
+                {r: aiState.firstHit.r + 1, c: aiState.firstHit.c}
+            );
+        }
+    }
+    // Deduplicate and add only valid, unattacked, non-duplicate targets
+    for (const t of candidates) {
+        if (isValidCoord(t.r, t.c) && !hasAttacked(t.r, t.c)) {
+            const isDup = aiState.potentialTargets.some(pt => pt.r === t.r && pt.c === t.c);
+            if (!isDup) aiState.potentialTargets.push(t);
+        }
     }
 }
 
 function reverseDirection() {
     if (!aiState.currentDirection || !aiState.firstHit) return;
+    // Keep the same axis but prune already-attacked targets so the AI
+    // explores the opposite end of the line from firstHit.
     aiState.potentialTargets = aiState.potentialTargets.filter(t => !hasAttacked(t.r, t.c));
 }

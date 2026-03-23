@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Battleship — Naval Command</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -32,10 +33,11 @@
         <div class="difficulty">
             AI:
             <select id="ai-difficulty">
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
+                <option value="easy" title="Random targeting">Easy</option>
+                <option value="medium" title="Hunt & target strategy">Medium</option>
+                <option value="hard" title="Probability-based strategy">Hard</option>
             </select>
+            <span class="difficulty-hint" id="difficulty-hint">Random targeting</span>
         </div>
     </div>
 
@@ -130,6 +132,10 @@
                 <div class="gameover-stat">
                     <div class="gameover-stat-value" id="gameover-enemy-hits">0</div>
                     <div class="gameover-stat-label">Enemy Hits</div>
+                </div>
+                <div class="gameover-stat">
+                    <div class="gameover-stat-value" id="gameover-accuracy">0%</div>
+                    <div class="gameover-stat-label">Accuracy</div>
                 </div>
             </div>
             <button class="btn btn-primary gameover-btn" id="gameover-restart-btn">Play Again</button>

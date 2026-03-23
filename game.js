@@ -129,13 +129,15 @@ class GameBoard {
         
         for (const {name, length} of fleetTypes) {
             let placed = false;
-            while (!placed) {
+            let attempts = 0;
+            while (!placed && attempts < 1000) {
                 const isHorizontal = Math.random() >= 0.5;
                 const row = Math.floor(Math.random() * this.size);
                 const col = Math.floor(Math.random() * this.size);
                 
                 const ship = new Ship(name, length);
                 placed = this.placeShip(ship, row, col, isHorizontal);
+                attempts++;
             }
         }
     }

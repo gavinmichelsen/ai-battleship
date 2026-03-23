@@ -21,7 +21,7 @@ const Advisor = (() => {
         ],
         afterSink: [
             "Ship down! Now switch back to hunting mode — spread your shots out again.",
-            "After sinking a ship, remember: no other ship can be adjacent to it (usually).",
+            "After sinking a ship, check adjacent cells — other ships could be right next to it.",
             "Focus on areas you haven't explored yet. Cluster shots waste turns.",
             "Check which ships are left — that tells you the minimum gap sizes to look for.",
         ],
@@ -187,6 +187,7 @@ const Advisor = (() => {
         const attackedCount = enemyBoard.missedAttacks.length +
             enemyBoard.ships.reduce((sum, s) => sum + s.hits, 0);
         const remainingCells = totalCells - attackedCount;
+        // Compute a priority score (not a true hit probability)
         const confidence = remainingCells > 0
             ? Math.min(99, Math.round((maxProb / (maxProb + remaining.length)) * 100))
             : 0;
