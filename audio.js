@@ -513,9 +513,9 @@ const AudioEngine = (() => {
         createOceanWaves();
         createSubHum();
 
-        // Stagger the first ping and creak
-        setTimeout(() => scheduleSonarPing(), 2000);
-        setTimeout(() => scheduleCreak(), 8000);
+        // Stagger the first ping and creak (tracked so stop() can cancel them)
+        timers.push(setTimeout(() => scheduleSonarPing(), 2000));
+        timers.push(setTimeout(() => scheduleCreak(), 8000));
     }
 
     function ensureContext() {
